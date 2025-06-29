@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guide Dordogne Mobile</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f8f9fa;
+            line-height: 1.4;
+        }
+        
+        .mobile-header {
+            background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+            color: white;
+            padding: 20px 15px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .mobile-header h1 {
+            font-size: 1.6rem;
+            margin-bottom: 5px;
+        }
+        
+        .content {
+            padding: 15px;
+            padding-bottom: 90px;
+            min-height: calc(100vh - 160px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .tab-content {
+            display: none;
+            min-height: calc(100vh - 200px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Carte */
+        .mobile-map {
+            height: 50vh;
+            width: 100%;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #ddd;
+        }
+        
+        .legend {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .legend h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .legend-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        /* Programme */
+        .day-card {
+            background: white;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .day-header {
+            background: #8B4513;
+            color: white;
+            padding: 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        
+        .day-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        
+        .expand-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .day-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .day-content.open {
+            max-height: 1000px;
+        }
+        
+        .time-slot {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .time-slot:last-child {
+            border-bottom: none;
+        }
+        
+        .time-label {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        
+        .place-card {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 8px 0;
+            border-left: 4px solid #28a745;
+        }
+        
+        .place-card.village { border-left-color: #2196f3; }
+        .place-card.nature { border-left-color: #9c27b0; }
+        .place-card.restaurant { border-left-color: #ff9800; }
+        .place-card.restaurant-veg { border-left-color: #4caf50; }
+        
+        .place-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .place-description {
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            color: #666;
+        }
+        
+        .place-tip {
+            font-size: 0.8rem;
+            color: #888;
+            font-style: italic;
+        }
+        
+        /* Conseils */
+        .tip-section {
+            background: white;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        
+        .tip-header {
+            background: #fff3cd;
+            padding: 15px;
+            font-weight: 600;
+            color: #856404;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .tip-content {
+            padding: 15px;
+            max-height: none;
+            overflow: visible;
+        }
+        
+        .tip-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .tip-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .tip-list li:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        
+        .tip-list li:before {
+            content: '✓';
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        
+        /* Infos */
+        .info-card {
+            background: white;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .info-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #8B4513;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .contact-item:last-child {
+            border-bottom: none;
+        }
+        
+        .contact-icon {
+            font-size: 1.2rem;
+            width: 24px;
+        }
+        
+        .contact-text {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+        
+        /* Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            z-index: 1000;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .nav-item {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+        
+        .nav-item.active {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .nav-icon {
+            font-size: 1.3rem;
+        }
+        
+        .nav-text {
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+        
+        .highlight-box {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0 20px 0;
+            border-left: 4px solid #28a745;
+            flex-shrink: 0;
+        }
+        
+        .highlight-box:last-child {
+            margin-bottom: 40px;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-header">
+        <h1>🏰 Guide Dordogne</h1>
+        <p>Votre semaine au Rocher de la Cave</p>
+    </div>
+    
+    <div class="content">
+        <!-- Onglet Carte -->
+        <div id="carte" class="tab-content active">
+            <div id="map" class="mobile-map">
+                <div class="loading">Chargement de la carte...</div>
+            </div>
+            
+            <div class="legend">
+                <h3>Légende</h3>
+                <div class="legend-grid">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #ff4444;"></div>
+                        <span>Camping</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #4444ff;"></div>
+                        <span>Villages</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #ff44ff;"></div>
+                        <span>Jardins</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #44ff44;"></div>
+                        <span>Restaurants</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #22dd22;"></div>
+                        <span>🌱 Végé</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #ff8800;"></div>
+                        <span>🛒 Courses</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #00aaff;"></div>
+                        <span>🦅 Oiseaux</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #0066cc;"></div>
+                        <span>🚣 Canoë</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Onglet Programme -->
+        <div id="programme" class="tab-content">
+            <div class="day-card">
+                <div class="day-header" onclick="toggleDay(this)">
+                    <div class="day-title">🏰 Jour 1 - Samedi : Arrivée</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="day-content">
+                    <div class="time-slot">
+                        <div class="time-label">☀️ Matin</div>
+                        <p>Installation au camping Rocher de la Cave</p>
+                    </div>
+                    <div class="time-slot">
+                        <div class="time-label">🌅 Après-midi</div>
+                        <div class="place-card village">
+                            <div class="place-name">📍 Domme (15 min)</div>
+                            <div class="place-description">Bastide royale perchée avec vue panoramique sur la vallée de la Dordogne.</div>
+                            <div class="place-tip">💡 Parking proche, rues accessibles en poussette.</div>
+                        </div>
+                    </div>
+                    <div class="time-slot">
+                        <div class="time-label">🌙 Soir</div>
+                        <div class="place-card restaurant">
+                            <div class="place-name">🍽️ Cabanoix & Châtaigne</div>
+                            <div class="place-description">Restaurant familial à Domme avec terrasse.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="day-card">
+                <div class="day-header" onclick="toggleDay(this)">
+                    <div class="day-title">🏘️ Jour 2 - Dimanche : Villages</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="day-content">
+                    <div class="time-slot">
+                        <div class="time-label">☀️ Matin</div>
+                        <div class="place-card village">
+                            <div class="place-name">📍 Beynac-et-Cazenac (10 min)</div>
+                            <div class="place-description">Plus Beaux Villages de France, château médiéval.</div>
+                            <div class="place-tip">💡 Restez près de la rivière avec bébé.</div>
+                        </div>
+                    </div>
+                    <div class="time-slot">
+                        <div class="time-label">🌅 Après-midi</div>
+                        <div class="place-card village">
+                            <div class="place-name">📍 La Roque-Gageac (15 min)</div>
+                            <div class="place-description">Village troglodytique avec microclimat méditerranéen.</div>
+                        </div>
+                    </div>
+                    <div class="time-slot">
+                        <div class="time-label">🌙 Soir</div>
+                        <div class="place-card restaurant">
+                            <div class="place-name">🍽️ La Plume d'Oie</div>
+                            <div class="place-description">Restaurant gastronomique à Domme.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="day-card">
+                <div class="day-header" onclick="toggleDay(this)">
+                    <div class="day-title">🌿 Jour 3 - Lundi : Jardins</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="day-content">
+                    <div class="time-slot">
+                        <div class="time-label">☀️ Matin</div>
+                        <div class="place-card nature">
+                            <div class="place-name">🌿 Jardins de Marqueyssac (20 min)</div>
+                            <div class="place-description">22 hectares, 150 000 buis taillés, belvédères sur la Dordogne.</div>
+                            <div class="place-tip">💡 Aire de jeux enfants, visites nocturnes jeudi soir.</div>
+                        </div>
+                    </div>
+                    <div class="time-slot">
+                        <div class="time-label">🌅 Après-midi</div>
+                        <div class="place-card nature">
+                            <div class="place-name">🌸 Jardins d'Eau de Carsac (15 min)</div>
+                            <div class="place-description">30 variétés de lotus, 550 mètres de passerelles à fleur d'eau.</div>
+                            <div class="place-tip">💡 Bassin tactile avec carpes koï pour les enfants.</div>
+                        </div>
+                    </div>
+                    <div class="time-slot">
+                        <div class="time-label">🌙 Soir</div>
+                        <div class="place-card restaurant">
+                            <div class="place-name">🍽️ L'Esplanade</div>
+                            <div class="place-description">Restaurant avec terrasse panoramique à Domme.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="day-card">
+                <div class="day-header" onclick="toggleDay(this)">
+                    <div class="day-title">🏛️ Jour 4 - Mardi : Sarlat</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="day-content">
+                    <div class="time-slot">
+                        <div class="time-label">☀️ Matin</div>
+                        <div class="place-card village">
+                            <div class="place-name">📍 Sarlat-la-Canéda (25 min)</div>
+                            <div class="place-description">Capitale du Périgord Noir, centre médiéval piétonnier.</div>
+                            <div class="place-tip">💡 Marché samedi matin, cathédrale Saint-Sacerdos.</div>
+                        </div>
+                    </div>
+                    <div class="time-slot">
+                        <div class="time-label">🌅 Après-midi</div>
+                        <div class="place-card nature">
+                            <div class="place-name">🌿 Jardins d'Eyrignac (30 min)</div>
+                            <div class="place-description">Jardins à la française, art topiaire exceptionnel.</div>
+                        </div>
+                    </div>
+                    <div class="time-slot">
+                        <div class="time-label">🌙 Soir</div>
+                        <div class="place-card restaurant-veg">
+                            <div class="place-name">🌱 La Chèvre et le Chou</div>
+                            <div class="place-description">Restaurant végétarien/végan, cuisine créative bio.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="day-card">
+                <div class="day-header" onclick="toggleDay(this)">
+                    <div class="day-title">💧 Jour 5 - Mercredi : Détente</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="day-content">
+                    <div class="time-slot">
+                        <div class="time-label">☀️ Matin</div>
+                        <div class="place-card village">
+                            <div class="place-name">📍 Cénac-et-Saint-Julien (5 min)</div>
+                            <div class="place-description">Village paisible au bord de la Dordogne.</div>
+                            <div class="place-tip">💡 Très accessible en poussette, idéal avec bébé.</div>
+                        </div>
+                    </div>
+                    <div class="time-slot">
+                        <div class="time-label">🌅 Après-midi</div>
+                        <p><strong>Repos au camping</strong> - Baignade, sieste !</p>
+                    </div>
+                    <div class="time-slot">
+                        <div class="time-label">🌙 Soir</div>
+                        <div class="place-card restaurant">
+                            <div class="place-name">🍽️ La Rapière</div>
+                            <div class="place-description">Restaurant traditionnel à Beynac avec terrasse.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="day-card">
+                <div class="day-header" onclick="toggleDay(this)">
+                    <div class="day-title">🏰 Jour 6 - Jeudi : Châteaux</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="day-content">
+                    <div class="time-slot">
+                        <div class="time-label">☀️ Matin</div>
+                        <div class="place-card nature">
+                            <div class="place-name">🏰 Castelnaud-la-Chapelle (20 min)</div>
+                            <div class="place-description">Village médiéval dominé par son château fort.</div>
+                            <div class="place-tip">💡 Village accessible, montée château facultative avec bébé.</div>
+                        </div>
+                    </div>
+                    <div class="time-slot">
+                        <div class="time-label">🌅 Après-midi</div>
+                        <div class="place-card nature">
+                            <div class="place-name">🏰 Les Milandes (25 min)</div>
+                            <div class="place-description">Château de Joséphine Baker avec jardins français.</div>
+                            <div class="place-tip">💡 Spectacles de rapaces, aire de jeux enfants.</div>
+                        </div>
+                    </div>
+                    <div class="time-slot">
+                        <div class="time-label">🌙 Soir</div>
+                        <div class="place-card restaurant">
+                            <div class="place-name">🍽️ Le Tournepique</div>
+                            <div class="place-description">Restaurant familial à Castelnaud.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="day-card">
+                <div class="day-header" onclick="toggleDay(this)">
+                    <div class="day-title">🎨 Jour 7 - Vendredi : Art paysager</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="day-content">
+                    <div class="time-slot">
+                        <div class="time-label">☀️ Matin</div>
+                        <div class="place-card nature">
+                            <div class="place-name">🌿 Jardins de l'Imaginaire (30 min)</div>
+                            <div class="place-description">Jardins contemporains, 13 tableaux de verdure et d'eau.</div>
+                            <div class="place-tip">💡 Théâtre de verdure, tunnel végétal, belvédère.</div>
+                        </div>
+                    </div>
+                    <div class="time-slot">
+                        <div class="time-label">🌅 Après-midi</div>
+                        <div class="place-card village">
+                            <div class="place-name">📍 Saint-Cyprien (30 min)</div>
+                            <div class="place-description">Bastide XIIIe siècle avec église-forteresse.</div>
+                        </div>
+                    </div>
+                    <div class="time-slot">
+                        <div class="time-label">🌙 Soir</div>
+                        <p><strong>Préparatifs de départ</strong> et dernière soirée camping.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Onglet Conseils -->
+        <div id="conseils" class="tab-content">
+            <div class="tip-section">
+                <div class="tip-header">
+                    <span>👶</span>
+                    <span>Avec bébé</span>
+                </div>
+                <div class="tip-content">
+                    <ul class="tip-list">
+                        <li>Porte-bébé pour certaines visites</li>
+                        <li>Aires de change dans tous les sites</li>
+                        <li>Restaurants avec chaises hautes</li>
+                        <li>Horaires adaptés aux siestes</li>
+                        <li>Poussettes tout-terrain recommandées</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="tip-section">
+                <div class="tip-header">
+                    <span>🚗</span>
+                    <span>Transport</span>
+                </div>
+                <div class="tip-content">
+                    <ul class="tip-list">
+                        <li>Parkings gratuits dans tous les villages</li>
+                        <li>Distances courtes (5-30 min max)</li>
+                        <li>Routes bien indiquées</li>
+                        <li>GPS recommandé pour les jardins</li>
+                        <li>Éviter heures de pointe à Sarlat</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="tip-section">
+                <div class="tip-header">
+                    <span>🦅</span>
+                    <span>Observation d'oiseaux</span>
+                </div>
+                <div class="tip-content">
+                    <ul class="tip-list">
+                        <li>Réserve de Vassivière (15 min) - Hérons, martins-pêcheurs</li>
+                        <li>Berges de la Dordogne à Cénac - Observation matinale</li>
+                        <li>Jardins d'Eau de Carsac - Oiseaux aquatiques</li>
+                        <li>Forêt de Domme - Pics, sitelles, mésanges</li>
+                        <li>Meilleure période : tôt le matin ou fin d'après-midi</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="tip-section">
+                <div class="tip-header">
+                    <span>🚣</span>
+                    <span>Canoë-kayak</span>
+                </div>
+                <div class="tip-content">
+                    <ul class="tip-list">
+                        <li>Base nautique de Cénac (5 min du camping)</li>
+                        <li>Location canoës 2-3 places famille</li>
+                        <li>Parcours découverte 1h - adapté avec enfants</li>
+                        <li>Réservation conseillée : 05 53 28 22 01</li>
+                        <li>Gilets de sauvetage fournis, parking gratuit</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="tip-section">
+                <div class="tip-header">
+                    <span>🛒</span>
+                    <span>Courses et supermarchés</span>
+                </div>
+                <div class="tip-content">
+                    <ul class="tip-list">
+                        <li>Intermarché Domme (12 min) - Le plus proche</li>
+                        <li>Leclerc Sarlat (25 min) - Grand choix, produits bio</li>
+                        <li>Horaires été : 8h30-20h du lundi au samedi</li>
+                        <li>Boulangeries dans chaque village visité</li>
+                        <li>Marché de Domme le jeudi matin</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="tip-section">
+                <div class="tip-header">
+                    <span>🎫</span>
+                    <span>Tarifs</span>
+                </div>
+                <div class="tip-content">
+                    <ul class="tip-list">
+                        <li>Pass famille dans la plupart des jardins</li>
+                        <li>Gratuit pour les moins de 5-6 ans</li>
+                        <li>Jardins ouverts toute l'année</li>
+                        <li>Visites nocturnes en été</li>
+                        <li>Tarifs préférentiels après 16h</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="highlight-box">
+                <div style="font-weight: 600; margin-bottom: 10px;">🌟 Activités nature bonus</div>
+                <p><strong>🦆 Étang de Tamniès</strong> - Observation oiseaux migrateurs (20 min)</p>
+                <p><strong>🚣 Descente Dordogne</strong> - Parcours Beynac → La Roque-Gageac (2h)</p>
+                <p><strong>🥖 Marchés locaux</strong> - Sarlat (mer/sam), Domme (jeu), Saint-Cyprien (dim)</p>
+            </div>
+        </div>
+        
+        <!-- Onglet Infos -->
+        <div id="infos" class="tab-content">
+            <div class="info-card">
+                <div class="info-title">📍 Votre camping</div>
+                <div class="contact-item">
+                    <div class="contact-icon">🏕️</div>
+                    <div class="contact-text">
+                        <strong>Camping Rocher de la Cave</strong><br>
+                        Point de départ de vos excursions
+                    </div>
+                </div>
+                <div class="contact-item">
+                    <div class="contact-icon">⏱️</div>
+                    <div class="contact-text">
+                        <strong>Distances maximales</strong><br>
+                        Tous les sites à 30 minutes maximum
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-card">
+                <div class="info-title">🚨 Numéros utiles</div>
+                <div class="contact-item">
+                    <div class="contact-icon">🏥</div>
+                    <div class="contact-text">
+                        <strong>Urgences</strong><br>
+                        SAMU: 15 | Police: 17 | Pompiers: 18
+                    </div>
+                </div>
+                <div class="contact-item">
+                    <div class="contact-icon">ℹ️</div>
+                    <div class="contact-text">
+                        <strong>Office Tourisme Sarlat</strong><br>
+                        05 53 31 45 45
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-card">
+                <div class="info-title">🌦️ Météo juillet</div>
+                <div class="contact-item">
+                    <div class="contact-icon">🌡️</div>
+                    <div class="contact-text">
+                        <strong>Températures</strong><br>
+                        Min: 15°C | Max: 28°C
+                    </div>
+                </div>
+                <div class="contact-item">
+                    <div class="contact-icon">👕</div>
+                    <div class="contact-text">
+                        <strong>À prévoir</strong><br>
+                        Vêtements légers + pull pour le soir
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bottom-nav">
+        <button class="nav-item active" onclick="showTab('carte', this)">
+            <div class="nav-icon">🗺️</div>
+            <div class="nav-text">Carte</div>
+        </button>
+        <button class="nav-item" onclick="showTab('programme', this)">
+            <div class="nav-icon">📋</div>
+            <div class="nav-text">Programme</div>
+        </button>
+        <button class="nav-item" onclick="showTab('conseils', this)">
+            <div class="nav-icon">💡</div>
+            <div class="nav-text">Conseils</div>
+        </button>
+        <button class="nav-item" onclick="showTab('infos', this)">
+            <div class="nav-icon">ℹ️</div>
+            <div class="nav-text">Infos</div>
+        </button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script>
+        let map;
+        let mapInitialized = false;
+        
+        // Navigation entre onglets
+        function showTab(tabName, button) {
+            // Cacher tous les contenus
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Désactiver tous les boutons
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Activer le bon contenu et bouton
+            document.getElementById(tabName).classList.add('active');
+            button.classList.add('active');
+            
+            // Initialiser la carte si nécessaire
+            if (tabName === 'carte' && !mapInitialized) {
+                setTimeout(initMap, 300);
+            } else if (tabName === 'carte' && map) {
+                setTimeout(() => map.invalidateSize(), 100);
+            }
+        }
+        
+        // Initialisation de la carte
+        function initMap() {
+            try {
+                map = L.map('map').setView([44.8, 1.2], 10);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+                
+                // Locations avec marqueurs
+                const locations = [
+                    { name: "🏕️ Camping Rocher de la Cave", coords: [44.8167, 1.2167], color: "#ff4444", type: "camping" },
+                    { name: "🏘️ Domme", coords: [44.7981, 1.2139], color: "#4444ff", type: "village" },
+                    { name: "🏘️ Beynac-et-Cazenac", coords: [44.8397, 1.1439], color: "#4444ff", type: "village" },
+                    { name: "🏘️ La Roque-Gageac", coords: [44.8256, 1.1842], color: "#4444ff", type: "village" },
+                    { name: "🏘️ Sarlat-la-Canéda", coords: [44.8922, 1.2161], color: "#4444ff", type: "village" },
+                    { name: "🏘️ Cénac-et-Saint-Julien", coords: [44.7931, 1.2231], color: "#4444ff", type: "village" },
+                    { name: "🏘️ Saint-Cyprien", coords: [44.8611, 1.0447], color: "#4444ff", type: "village" },
+                    { name: "🌿 Jardins de Marqueyssac", coords: [44.8103, 1.1556], color: "#ff44ff", type: "nature" },
+                    { name: "🌸 Jardins d'Eau de Carsac", coords: [44.8083, 1.2333], color: "#ff44ff", type: "nature" },
+                    { name: "🌿 Jardins d'Eyrignac", coords: [44.9278, 1.2556], color: "#ff44ff", type: "nature" },
+                    { name: "🌿 Jardins de l'Imaginaire", coords: [45.1317, 1.3056], color: "#ff44ff", type: "nature" },
+                    { name: "🏰 Castelnaud-la-Chapelle", coords: [44.8119, 1.1481], color: "#ff44ff", type: "nature" },
+                    { name: "🏰 Les Milandes", coords: [44.8033, 1.1167], color: "#ff44ff", type: "nature" },
+                    { name: "🌱 La Chèvre et le Chou", coords: [44.8922, 1.2161], color: "#22dd22", type: "restaurant-veg" },
+                    { name: "🍽️ Cabanoix & Châtaigne", coords: [44.7981, 1.2139], color: "#44ff44", type: "restaurant" },
+                    { name: "🍽️ La Plume d'Oie", coords: [44.7981, 1.2139], color: "#44ff44", type: "restaurant" },
+                    { name: "🍽️ L'Esplanade", coords: [44.7981, 1.2139], color: "#44ff44", type: "restaurant" },
+                    { name: "🍽️ La Rapière", coords: [44.8397, 1.1439], color: "#44ff44", type: "restaurant" },
+                    { name: "🍽️ Le Tournepique", coords: [44.8119, 1.1481], color: "#44ff44", type: "restaurant" },
+                    // Nouveaux points d'intérêt
+                    { name: "🛒 Intermarché Domme", coords: [44.7925, 1.2075], color: "#ff8800", type: "courses" },
+                    { name: "🛒 Leclerc Sarlat", coords: [44.8944, 1.2222], color: "#ff8800", type: "courses" },
+                    { name: "🦅 Réserve de Vassivière", coords: [44.8275, 1.1925], color: "#00aaff", type: "oiseaux" },
+                    { name: "🦅 Berges Dordogne Cénac", coords: [44.7920, 1.2240], color: "#00aaff", type: "oiseaux" },
+                    { name: "🦅 Étang de Tamniès", coords: [44.9667, 1.1833], color: "#00aaff", type: "oiseaux" },
+                    { name: "🚣 Base nautique Cénac", coords: [44.7915, 1.2225], color: "#0066cc", type: "canoe" }
+                ];
+                
+                // Créer les marqueurs avec icônes
+                function createIcon(color, emoji) {
+                    return L.divIcon({
+                        html: `<div style="background-color: ${color}; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 3px 8px rgba(0,0,0,0.3);">${emoji}</div>`,
+                        className: 'custom-marker',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15]
+                    });
+                }
+                
+                // Ajouter les marqueurs
+                locations.forEach(location => {
+                    let emoji = '';
+                    switch(location.type) {
+                        case 'camping': emoji = '🏕️'; break;
+                        case 'village': emoji = '🏘️'; break;
+                        case 'restaurant': emoji = '🍽️'; break;
+                        case 'restaurant-veg': emoji = '🌱'; break;
+                        case 'nature': emoji = '🌿'; break;
+                        case 'courses': emoji = '🛒'; break;
+                        case 'oiseaux': emoji = '🦅'; break;
+                        case 'canoe': emoji = '🚣'; break;
+                    }
+                    
+                    const marker = L.marker(location.coords, {
+                        icon: createIcon(location.color, emoji)
+                    }).addTo(map);
+                    
+                    // Popup avec informations spécifiques
+                    let popupContent = `
+                        <div style="text-align: center; font-family: Arial, sans-serif; max-width: 200px;">
+                            <div style="font-size: 16px; margin-bottom: 5px;">${emoji}</div>
+                            <div style="font-weight: bold; margin-bottom: 5px;">${location.name.replace(emoji + ' ', '')}</div>
+                    `;
+                    
+                    // Ajouter des infos spécifiques selon le type
+                    if (location.type === 'courses') {
+                        if (location.name.includes('Intermarché')) {
+                            popupContent += '<div style="font-size: 12px; color: #666;">Le plus proche (12 min)</div>';
+                        } else {
+                            popupContent += '<div style="font-size: 12px; color: #666;">Grand choix, produits bio (25 min)</div>';
+                        }
+                    } else if (location.type === 'oiseaux') {
+                        if (location.name.includes('Vassivière')) {
+                            popupContent += '<div style="font-size: 12px; color: #666;">Hérons, martins-pêcheurs</div>';
+                        } else if (location.name.includes('Cénac')) {
+                            popupContent += '<div style="font-size: 12px; color: #666;">Observation matinale</div>';
+                        } else {
+                            popupContent += '<div style="font-size: 12px; color: #666;">Oiseaux migrateurs</div>';
+                        }
+                    } else if (location.type === 'canoe') {
+                        popupContent += '<div style="font-size: 12px; color: #666;">Location famille - Tél: 05 53 28 22 01</div>';
+                    }
+                    
+                    popupContent += '</div>';
+                    
+                    marker.bindPopup(popupContent, {
+                        maxWidth: 250,
+                        className: 'mobile-popup'
+                    });
+                });
+                
+                // Cercle de 30km
+                L.circle([44.8167, 1.2167], {
+                    color: '#8B4513',
+                    fillColor: '#D2691E',
+                    fillOpacity: 0.15,
+                    radius: 30000,
+                    weight: 2
+                }).addTo(map).bindPopup("Zone de 30km autour du camping");
+                
+                mapInitialized = true;
+                
+                // Supprimer le message de chargement
+                document.getElementById('map').querySelector('.loading').style.display = 'none';
+                
+            } catch (error) {
+                console.error('Erreur carte:', error);
+                document.getElementById('map').innerHTML = 
+                    '<div style="padding: 20px; text-align: center; color: #666;">Erreur de chargement de la carte. Veuillez actualiser.</div>';
+            }
+        }
+        
+        // Fonction pour déplier/replier les jours
+        function toggleDay(header) {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.expand-icon');
+            
+            if (content.classList.contains('open')) {
+                content.classList.remove('open');
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                content.classList.add('open');
+                icon.style.transform = 'rotate(180deg)';
+            }
+        }
+        
+        // Initialisation au chargement
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialiser la carte
+            initMap();
+            
+            // Ouvrir le premier jour par défaut
+            const firstDay = document.querySelector('.day-header');
+            if (firstDay) {
+                setTimeout(() => toggleDay(firstDay), 500);
+            }
+        });
+        
+        // Gestion de l'orientation mobile
+        window.addEventListener('orientationchange', function() {
+            setTimeout(() => {
+                if (map) {
+                    map.invalidateSize();
+                }
+            }, 600);
+        });
+        
+        // Empêcher le zoom de la page mais permettre le scroll
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
+        
+        // Forcer le scroll sur les onglets
+        document.addEventListener('touchstart', function(e) {
+            const target = e.target.closest('.tab-content');
+            if (target) {
+                target.style.overflowY = 'auto';
+                target.style.webkitOverflowScrolling = 'touch';
+            }
+        }, { passive: true });
+    </script>
+</body>
+</html>
